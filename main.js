@@ -248,7 +248,7 @@ class Database {
     /**
      * Creates or replaces some value to the database
      * @param {string} jsonPath JSON path
-     * @param {*} newData Data to be inserted into the database, setting to `null` without enabled *continueSettingThePathIfValueIsNull* flag causes **the path deletion**.
+     * @param {*} newData Data to be inserted into the database, setting to `null` without enabled *`continueSettingThePathIfValueIsNull`* flag causes **the path deletion**.
      * @returns
      */
     set(jsonPath, newData) {
@@ -309,7 +309,7 @@ class Database {
     /**
      * Deletes value from path
      * @param {string} jsonPath Existing path
-     * @returns {{deleted: true, jsonData}} New data. All empty values from the any key specified in the `jsonPath` argument will be deleted if *keepEmptyKeysWhileDeleting* flag is disabled.
+     * @returns {{deleted: true, newJSON: *} | {deleted: false, code: number, reason: string}} Deletion information. All empty values from the any key specified in the `jsonPath` argument will be deleted if *`keepEmptyKeysWhileDeleting`* flag is disabled.
      * @example
      * const { Databasae } = require("./dbHandler")
      * const db = new Database()
@@ -366,7 +366,7 @@ class Database {
 
         return {
             deleted: true,
-            newJSON: current,
+            newJSON: !current ? null : current,
         }
     }
 }
