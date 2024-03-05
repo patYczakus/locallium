@@ -34,6 +34,7 @@ class DatabaseFlags {
         ["setValueToDatabaseFileOnReadIfDoesntExist", ["t:string"], ""],
         ["continueSettingThePathIfValueIsNull", ["t:boolean"], false],
         ["keepEmptyKeysWhileDeleting", ["t:boolean"], false],
+        ["keySeparator", ["t:string"], "."],
     ]
     /**
      * Static variable getting all of the flags.
@@ -204,7 +205,7 @@ class Database {
      */
     get(jsonPath = "") {
         if (typeof jsonPath !== "string") throw console.error(new TypeError('"jsonPath" argument must be a string.'))
-        jsonPath = jsonPath.split(".")
+        jsonPath = jsonPath.split(this.#flags.flags.keySeparator)
 
         if (!fs.existsSync(this.#fp)) {
             if (this.#flags.flags.createDatabaseFileOnReadIfDoesntExist)
@@ -292,7 +293,7 @@ class Database {
             return
         }
 
-        jsonPath = jsonPath.split(".")
+        jsonPath = jsonPath.split(this.#flags.flags.keySeparator)
 
         if (!fs.existsSync(this.#fp)) {
             if (jsonPath.filter((x) => x !== "").length > 0) var ndata = zmienWartoscWJson({}, jsonPath, newData)
@@ -341,7 +342,7 @@ class Database {
             }
         }
 
-        const keys = jsonPath.split(".")
+        const keys = jsonPath.split(this.#flags.flags.keySeparator)
         let current = JSON.parse(jsonData)
 
         for (const key of keys) {

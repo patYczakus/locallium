@@ -94,6 +94,9 @@ There is a list of flags, you can also use static getter `DatabaseFlags.flagsLis
 -   Flag `keepEmptyKeysWhileDeleting`
     -   Possible values: boolean
     -   Default value: `false`
+-   Flag `keySeparator`
+    -   Possible values: string
+    -   Default value: `"."`
 
 ## License
 
