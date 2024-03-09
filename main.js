@@ -35,6 +35,7 @@ class DatabaseFlags {
         ["continueSettingThePathIfValueIsNull", ["t:boolean"], false],
         ["keepEmptyKeysWhileDeleting", ["t:boolean"], false],
         ["keySeparator", ["t:string"], "."],
+        ["jsonSpaces", ["t:number", null], 4],
     ]
     /**
      * Static variable getting all of the flags.
@@ -86,7 +87,7 @@ class DatabaseFlags {
             } else if (
                 !(
                     !DatabaseFlags.#flagsInfo[DatabaseFlags.#flagsInfo.map((s) => s[0]).indexOf(x[0])].map((s) => s[1]).includes("t:" + typeof x[1]) &&
-                    !DatabaseFlags.#flagsInfo[DatabaseFlags.#flagsInfo.map((s) => s[0]).indexOf(x[0])].map((s) => s[1]).includes(x[1])
+                    !DatabaseFlags.#flagsInfo[DatabaseFlags.#flagsInfo.map((s) => s[0]).indexOf(x[0])].map((s) => s[1]).includes(typeof x[1] === "string" ? "v:" + x[1] : x[1])
                 )
             ) {
                 constructor.errorsHave = true
@@ -231,7 +232,7 @@ class Database {
         var json = JSON.parse(file)
         //console.log(typeof json)
 
-        if (jsonPath.filter((x) => x !== "").length > 0 && typeof json === "object") {
+        if (jsonPath.filter((x) => x !== "").length > 0 && typeof json === "object" && json) {
             for (let i = 0; i < jsonPath.length; i++) {
                 if (typeof json[jsonPath[i]] !== "undefined") json = json[jsonPath[i]]
                 else {
@@ -239,7 +240,7 @@ class Database {
                     break
                 }
             }
-        } else if (jsonPath.filter((x) => x !== "").length > 0 && typeof json !== "object") json = null
+        } else if (jsonPath.filter((x) => x !== "").length > 0 && (typeof json !== "object" || !json)) json = null
 
         return {
             exists: json !== null,
@@ -253,10 +254,11 @@ class Database {
      * @returns
      */
     set(jsonPath, newData) {
+        var spaces = this.#flags.flags.jsonSpaces
         function zmienWartoscWJson(jsonStr, argument1, argument2) {
             try {
-                const data = typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr
-                const keys = typeof argument1 === "string" ? argument1.split(".") : argument1
+                const data = typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr || {}
+                const keys = typeof argument1 === "string" ? argument1.split(this.#flags.flags.keySeparator) : argument1
                 let current = data
                 for (const key of keys.slice(0, -1)) {
                     if (!current[key]) {
@@ -265,7 +267,8 @@ class Database {
                     current = current[key]
                 }
                 current[keys[keys.length - 1]] = argument2
-                return JSON.stringify(data, null, 2)
+                if (spaces !== null) return JSON.stringify(data, null, spaces)
+                else JSON.stringify(data)
             } catch (error) {
                 throw console.error(error)
             }
