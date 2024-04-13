@@ -5,7 +5,7 @@ const typeofKeys = ["string", "boolean", "number", "bigint", "function", "undefi
 /**
  * Class enabling features (such as creating file on read if it doesn't exist) on `Database` class.
  * @example
- * const { DatabaseFlags } = require("./dbHandler")
+ * const { DatabaseFlags } = require("locallium")
  *
  * // First option
  * const flags = new DatabaseFlags({
@@ -51,14 +51,18 @@ class DatabaseFlags {
      */
     static getFlagInfo(flag) {
         if (!this.flagsList.includes(flag)) return console.error(new RangeError(`Unknown flag ${flag}`))
+        var typeOfSyntax = typeof this.#flagsInfo[this.#flagsInfo.indexOf(flag)][1]
         return {
-            JSDoc_possibleValues: this.#flagsInfo[this.#flagsInfo.indexOf(flag)][1]
-                .map((s) => {
-                    if (typeof s == "string" && typeofKeys.includes(s)) return s.slice(2)
-                    if (typeof s == "string") return `"${s}"`
-                    else return `${s}`
-                })
-                .join(" | "),
+            JSDoc_possibleValues:
+                typeOfSyntax === "string"
+                    ? "*"
+                    : this.#flagsInfo[this.#flagsInfo.map((x) => x[0]).indexOf(flag)][1]
+                          .map((s) => {
+                              if (typeof s == "string" && typeofKeys.includes(s)) return s.slice(2)
+                              if (typeof s == "string") return `"${s}"`
+                              else return `${s}`
+                          })
+                          .join(" | "),
             defaultValue: this.#flagsInfo[this.#flagsInfo.indexOf(flag)][2],
         }
     }
@@ -162,7 +166,7 @@ class DatabaseFlags {
  * @example
  * // This is basic example using the database
  *
- * const { Database, DatabaseFlags } = require("./dbHandler")
+ * const { Database, DatabaseFlags } = require("locallium")
  *
  * const flags = new DatabaseFlags({
  *     // some flags if important
@@ -315,7 +319,7 @@ class Database {
      * @param {string} jsonPath Existing path
      * @returns {{deleted: true, newJSON: *} | {deleted: false, code: number, reason: string}} Deletion information. All empty values from the any key specified in the `jsonPath` argument will be deleted if *`keepEmptyKeysWhileDeleting`* flag is disabled.
      * @example
-     * const { Databasae } = require("./dbHandler")
+     * const { Databasae } = require("locallium")
      * const db = new Database()
      *
      * db.set("somePath", "someValue")

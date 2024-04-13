@@ -97,6 +97,10 @@ There is a list of flags, you can also use static getter `DatabaseFlags.flagsLis
 -   Flag `keySeparator`
     -   Possible values: string
     -   Default value: `"."`
+-   Flag `jsonSpaces`
+    -   > Cause also formatiing file
+    -   Possible values: number or `null`
+    -   Default value: `4`
 
 ## License
 
