@@ -3,7 +3,7 @@
         "fs": "0.0.1-security"
     },
     "name": "locallium",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "Use local file as a database system",
     "main": "main.js",
     "devDependencies": {},

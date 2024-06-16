@@ -206,7 +206,7 @@ class Database {
     /**
      * Gets from the file (declared in the class before)
      * @param {string} jsonPath JSON Path (default: empty string - it means get all)
-     * @returns {{ exists: boolean, val: any }} Returns `.exists` boolean (checks if value isn't just `null`) and `.val` posibble value (can get object, array, string, boolean, number, boolean or `null`)
+     * @returns {{ exists: boolean, val: any }} Returns `.exists` boolean (checks if value isn't just `null`) and `.val` posibble value (can get object, array, string, number, boolean or `null`)
      */
     get(jsonPath = "") {
         if (typeof jsonPath !== "string") throw console.error(new TypeError('"jsonPath" argument must be a string.'))
@@ -330,6 +330,7 @@ class Database {
      * console.log(anotherdb.delete("somePath")) // => { deleted: false, code: 1404, reason: 'File ../noExistingFolder/andFile.json does not exist.' }
      */
     delete(jsonPath) {
+        var spaces = this.#flags.flags.jsonSpaces
         let jsonData = fs.readFileSync(this.#fp, {
             encoding: "utf8",
         })
@@ -350,25 +351,28 @@ class Database {
         }
 
         const keys = jsonPath.split(this.#flags.flags.keySeparator)
-        let current = JSON.parse(jsonData)
+        const data = JSON.parse(jsonData)
+        let current = data
 
-        for (const key of keys) {
-            if (current.hasOwnProperty(key)) {
-                delete current[key]
-            } else {
-                break
-            }
+        for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i]
+            current = current[key]
         }
 
+        delete current[keys[keys.length - 1]]
+
         if (!this.#flags.flags.keepEmptyKeysWhileDeleting)
-            for (let i = 0; i < keys.length - 1; i++) {
+            for (let i = keys.length - 2; i >= 0; i--) {
                 const key = keys[i]
                 if (!current[key]) {
                     delete current[key]
                 }
             }
 
-        fs.writeFileSync(this.#fp, JSON.stringify(current), {
+        if (spaces !== null) var x = JSON.stringify(data, null, spaces)
+        else var x = JSON.stringify(data)
+
+        fs.writeFileSync(this.#fp, x, {
             encoding: "utf8",
         })
 

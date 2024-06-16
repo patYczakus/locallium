@@ -98,9 +98,10 @@ There is a list of flags, you can also use static getter `DatabaseFlags.flagsLis
     -   Possible values: string
     -   Default value: `"."`
 -   Flag `jsonSpaces`
-    -   > Cause also formatiing file
+    -   > Cause also formatting file
     -   Possible values: number or `null`
     -   Default value: `4`
+-
 
 ## License
 
