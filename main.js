@@ -194,14 +194,14 @@ class Database {
     #flags
     /**
      * @param {string} filePath File path (default: `"database"` - means the file *./database.json*)
-     * @param {DatabaseFlags} flags Features about the database (default: default values from `DatabaseFlags` class)
+     * @param {DatabaseFlags} [flags=null] Features about the database (default: default values from `DatabaseFlags` class)
      * @returns
      */
-    constructor(filePath = "database", flags = new DatabaseFlags()) {
+    constructor(filePath = "database", flags = null) {
         if (typeof flags !== "object" || !flags instanceof DatabaseFlags) return TypeError('"flags" must be an DatabaseFlags class')
         if (typeof filePath !== "string") throw console.error(new TypeError('"filePath" argument must be a string.'))
         this.#fp = filePath.replace(/(.*)\.json/g, "$1") + ".json"
-        this.#flags = flags
+        this.#flags = flags || new DatabaseFlags()
     }
     /**
      * Gets from the file (declared in the class before)
@@ -272,7 +272,7 @@ class Database {
                 }
                 current[keys[keys.length - 1]] = argument2
                 if (spaces !== null) return JSON.stringify(data, null, spaces)
-                else JSON.stringify(data)
+                else return JSON.stringify(data)
             } catch (error) {
                 throw console.error(error)
             }
@@ -304,10 +304,16 @@ class Database {
 
         if (!fs.existsSync(this.#fp)) {
             if (jsonPath.filter((x) => x !== "").length > 0) var ndata = zmienWartoscWJson({}, jsonPath, newData)
-            else var ndata = JSON.stringify(newData)
+            else {
+                if (spaces !== null) var ndata = JSON.stringify(newData, null, spaces)
+                else var ndata = JSON.stringify(newData)
+            }
         } else {
             if (jsonPath.filter((x) => x !== "").length > 0) var ndata = zmienWartoscWJson(typeof this.get().val === "object" ? this.get().val : {}, jsonPath, newData)
-            else var ndata = JSON.stringify(newData)
+            else {
+                if (spaces !== null) var ndata = JSON.stringify(newData, null, spaces)
+                else var ndata = JSON.stringify(newData)
+            }
         }
 
         fs.writeFileSync(this.#fp, ndata, {
@@ -352,22 +358,42 @@ class Database {
 
         const keys = jsonPath.split(this.#flags.flags.keySeparator)
         const data = JSON.parse(jsonData)
-        let current = data
 
-        for (let i = 0; i < keys.length - 1; i++) {
-            const key = keys[i]
-            current = current[key]
-        }
+        var n = 0
+        var ended = false
 
-        delete current[keys[keys.length - 1]]
-
-        if (!this.#flags.flags.keepEmptyKeysWhileDeleting)
-            for (let i = keys.length - 2; i >= 0; i--) {
+        do {
+            console.log(n)
+            let current = data
+            for (let i = 0; i < keys.length - 1 - n; i++) {
                 const key = keys[i]
-                if (!current[key]) {
-                    delete current[key]
-                }
+                console.log(i, keys[i])
+                current = current[key]
             }
+
+            console.log(keys[keys.length - 1 - n])
+
+            console.log(
+                n < keys.length,
+                "|",
+                n == 0,
+                typeof current[keys[keys.length - 1 - n]],
+                typeof current[keys[keys.length - 1 - n]] === "object" ? Object.keys(current[keys[keys.length - 1 - n]] ?? {}).length == 0 : !current[keys[keys.length - 1 - n]]
+            )
+
+            if (
+                ((typeof current[keys[keys.length - 1 - n]] === "object"
+                    ? Object.keys(current[keys[keys.length - 1 - n]] ?? {}).length == 0
+                    : !current[keys[keys.length - 1 - n]]) ||
+                    n == 0) &&
+                n < keys.length
+            ) {
+                delete current[keys[keys.length - 1 - n]]
+                n++
+            } else {
+                ended = true
+            }
+        } while (!this.#flags.flags.keepEmptyKeysWhileDeleting && !ended)
 
         if (spaces !== null) var x = JSON.stringify(data, null, spaces)
         else var x = JSON.stringify(data)
@@ -378,7 +404,7 @@ class Database {
 
         return {
             deleted: true,
-            newJSON: !current ? null : current,
+            newJSON: !data ? null : data,
         }
     }
 }
