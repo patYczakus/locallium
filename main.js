@@ -363,23 +363,23 @@ class Database {
         var ended = false
 
         do {
-            console.log(n)
+            // console.log(n)
             let current = data
             for (let i = 0; i < keys.length - 1 - n; i++) {
                 const key = keys[i]
-                console.log(i, keys[i])
+                // console.log(i, keys[i])
                 current = current[key]
             }
 
-            console.log(keys[keys.length - 1 - n])
+            // console.log(keys[keys.length - 1 - n])
 
-            console.log(
-                n < keys.length,
-                "|",
-                n == 0,
-                typeof current[keys[keys.length - 1 - n]],
-                typeof current[keys[keys.length - 1 - n]] === "object" ? Object.keys(current[keys[keys.length - 1 - n]] ?? {}).length == 0 : !current[keys[keys.length - 1 - n]]
-            )
+            // console.log(
+            //     n < keys.length,
+            //     "|",
+            //     n == 0,
+            //     typeof current[keys[keys.length - 1 - n]],
+            //     typeof current[keys[keys.length - 1 - n]] === "object" ? Object.keys(current[keys[keys.length - 1 - n]] ?? {}).length == 0 : !current[keys[keys.length - 1 - n]]
+            // )
 
             if (
                 ((typeof current[keys[keys.length - 1 - n]] === "object"
