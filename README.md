@@ -54,6 +54,8 @@ if (data.exists) {
 db.set("", data)
 ```
 
+You can also use asynchromous functions, prefixed with letter "a": `Database#aget()`, `Database#aset()` and `Database#adelete()`
+
 ## Types of flags and usage
 
 `DatabaseFlags` classes have some flags that can be used to enable features. To use, check the code below:
@@ -101,7 +103,12 @@ There is a list of flags, you can also use static getter `DatabaseFlags.flagsLis
     -   > Cause also formatting file
     -   Possible values: number or `null`
     -   Default value: `4`
--
+-   Flag `alwaysThrowErrorsNoMatterWhat`
+    -   Possible values: boolean
+    -   Default value: `false`
+-   Flag `checkFileExistFrom`
+    -   Possible values: `"watchFunc"` or `"methods"`
+    -   Default value: `"methods"`
 
 ## License
 

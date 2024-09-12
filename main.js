@@ -1,7 +1,20 @@
 const fs = require("fs")
-
 const typeofKeys = ["string", "boolean", "number", "bigint", "function", "undefined", "object", "symbol"]
 
+/**
+ * `Database#get()` snapshot
+ * @typedef {Object} LocalliumSnapshot
+ * @property {boolean} exist
+ * @property {any} val
+ */
+
+/**
+ * @typedef {"getAdvancedWarns" | "createDatabaseFileOnReadIfDoesntExist" | "setValueToDatabaseFileOnReadIfDoesntExist" | "continueSettingThePathIfValueIsNull" | "keepEmptyKeysWhileDeleting" | "keySeparator" | "jsonSpaces" | "alwaysThrowErrorsNoMatterWhat" | "checkFileExistFrom"} DatabaseFlagsNames
+ */
+
+/**
+ * @typedef {{deleted: true, newJSON: *} | {deleted: false, code: number, reason: string}} LocalliumDeletionState
+ */
 /**
  * Class enabling features (such as creating file on read if it doesn't exist) on `Database` class.
  * @example
@@ -36,6 +49,9 @@ class DatabaseFlags {
         ["keepEmptyKeysWhileDeleting", ["t:boolean"], false],
         ["keySeparator", ["t:string"], "."],
         ["jsonSpaces", ["t:number", null], 4],
+        ["alwaysThrowErrorsNoMatterWhat", ["t:boolean"], false],
+        ["checkFileExistFrom", ["watchFunc", "methods"], "methods"],
+        // ["checkFileExistInterval", ["t:number"], 5000]
     ]
     /**
      * Static variable getting all of the flags.
@@ -51,30 +67,33 @@ class DatabaseFlags {
      */
     static getFlagInfo(flag) {
         if (!this.flagsList.includes(flag)) return console.error(new RangeError(`Unknown flag ${flag}`))
-        var typeOfSyntax = typeof this.#flagsInfo[this.#flagsInfo.indexOf(flag)][1]
+        var syntaxPlace = this.#flagsInfo.find((x) => x[0] === flag)[1]
         return {
             JSDoc_possibleValues:
-                typeOfSyntax === "string"
+                typeof syntaxPlace === "string"
                     ? "*"
-                    : this.#flagsInfo[this.#flagsInfo.map((x) => x[0]).indexOf(flag)][1]
+                    : syntaxPlace
                           .map((s) => {
-                              if (typeof s == "string" && typeofKeys.includes(s)) return s.slice(2)
+                              if (typeof s == "string" && typeofKeys.includes(s.slice(2))) return s.slice(2)
                               if (typeof s == "string") return `"${s}"`
                               else return `${s}`
                           })
                           .join(" | "),
-            defaultValue: this.#flagsInfo[this.#flagsInfo.indexOf(flag)][2],
+            defaultValue: this.#flagsInfo.find((x) => x[0] === flag)[2],
         }
     }
 
     /**
-     * @param {{}} options Flags from `DatabaseFlags.flagsList` with equally JSDoc syntax
+     * @param {{ [flag: DatabaseFlagsNames]: any }} options Flags from `DatabaseFlags.flagsList` with equally JSDoc syntax
      */
     constructor(options = {}) {
         var constructor = {
             errorsHave: false,
             errorSpecify: new Error(),
         }
+        /**
+         * @type {{ [flag: DatabaseFlagsNames]: any }}
+         */
         var nf = {}
         for (var i = 0; i < DatabaseFlags.#flagsInfo.length; i++) {
             nf[DatabaseFlags.#flagsInfo[i][0]] = DatabaseFlags.#flagsInfo[i][2]
@@ -113,20 +132,20 @@ class DatabaseFlags {
         }
 
         if (constructor.errorsHave) {
-            console.error(constructor.errorSpecify)
+            throw console.error(constructor.errorSpecify)
         } else {
             this.flags = nf
         }
     }
     /**
      * Sets the flags, can be chained together.
-     * @param {string} flag
+     * @param {DatabaseFlagsNames} flag
      * @param {*} value Flags value equally to JSDoc syntax
      * @returns {DatabaseFlags}
      */
     setFlag(flag, value) {
         if (!DatabaseFlags.#flagsInfo.map((s) => s[0]).includes(flag)) {
-            console.error(
+            throw console.error(
                 new ReferenceError(`"options" argument contains undefined flag "${flag}". Acceptable options are: ${DatabaseFlags.#flagsInfo.map((s) => s[0]).join(", ")}.`)
             )
         } else if (
@@ -134,7 +153,7 @@ class DatabaseFlags {
             !DatabaseFlags.#flagsInfo[DatabaseFlags.#flagsInfo.map((s) => s[0]).indexOf(flag)].map((s) => s[1]).includes("t:" + typeof value) &&
             !DatabaseFlags.#flagsInfo[DatabaseFlags.#flagsInfo.map((s) => s[0]).indexOf(flag)].map((s) => s[1]).includes(value)
         ) {
-            console.error(
+            throw console.error(
                 new TypeError(
                     `Flag ${flag} in "options" argument has non-acceptable value. This flag must be equal to this JSDoc syntax: ${DatabaseFlags.#flagsInfo[
                         DatabaseFlags.#flagsInfo.map((s) => s[0]).indexOf(flag)
@@ -192,6 +211,7 @@ class DatabaseFlags {
 class Database {
     #fp
     #flags
+    #exists
     /**
      * @param {string} filePath File path (default: `"database"` - means the file *./database.json*)
      * @param {DatabaseFlags} [flags=null] Features about the database (default: default values from `DatabaseFlags` class)
@@ -202,53 +222,65 @@ class Database {
         if (typeof filePath !== "string") throw console.error(new TypeError('"filePath" argument must be a string.'))
         this.#fp = filePath.replace(/(.*)\.json/g, "$1") + ".json"
         this.#flags = flags || new DatabaseFlags()
+        this.#exists = flags.flags.checkFileExistFrom !== "methods" ? fs.existsSync(this.#fp) : null
+
+        if (flags.flags.checkFileExistFrom !== "methods") {
+            fs.watch(this.#fp, null, (type) => {
+                if (type == "rename") this.#exists = fs.existsSync(this.#fp)
+            })
+        }
     }
     /**
      * Gets from the file (declared in the class before)
      * @param {string} jsonPath JSON Path (default: empty string - it means get all)
-     * @returns {{ exists: boolean, val: any }} Returns `.exists` boolean (checks if value isn't just `null`) and `.val` posibble value (can get object, array, string, number, boolean or `null`)
+     * @returns {LocalliumSnapshot} Returns `.exists` boolean (checks if value isn't just `null`) and `.val` posibble value (can get object, array, string, number, boolean or `null`)
      */
     get(jsonPath = "") {
-        if (typeof jsonPath !== "string") throw console.error(new TypeError('"jsonPath" argument must be a string.'))
-        jsonPath = jsonPath.split(this.#flags.flags.keySeparator)
+        try {
+            if (typeof jsonPath !== "string") throw console.error(new TypeError('"jsonPath" argument must be a string.'))
+            jsonPath = jsonPath.split(this.#flags.flags.keySeparator)
 
-        if (!fs.existsSync(this.#fp)) {
-            if (this.#flags.flags.createDatabaseFileOnReadIfDoesntExist)
-                fs.writeFileSync(this.#fp, this.#flags.flags.setValueToDatabaseFileOnReadIfDoesntExist, {
-                    encoding: "utf8",
-                })
-            return {
-                exists: false,
-                val: null,
-            }
-        }
-
-        const file = fs.readFileSync(this.#fp, {
-            encoding: "utf8",
-        })
-
-        if (file == "")
-            return {
-                exists: false,
-                val: null,
-            }
-
-        var json = JSON.parse(file)
-        //console.log(typeof json)
-
-        if (jsonPath.filter((x) => x !== "").length > 0 && typeof json === "object" && json) {
-            for (let i = 0; i < jsonPath.length; i++) {
-                if (typeof json[jsonPath[i]] !== "undefined") json = json[jsonPath[i]]
-                else {
-                    json = null
-                    break
+            if (this.#exists ?? !fs.existsSync(this.#fp)) {
+                if (this.#flags.flags.createDatabaseFileOnReadIfDoesntExist)
+                    fs.writeFileSync(this.#fp, this.#flags.flags.setValueToDatabaseFileOnReadIfDoesntExist, {
+                        encoding: "utf8",
+                    })
+                return {
+                    exists: false,
+                    val: null,
                 }
             }
-        } else if (jsonPath.filter((x) => x !== "").length > 0 && (typeof json !== "object" || !json)) json = null
 
-        return {
-            exists: json !== null,
-            val: json,
+            const file = fs.readFileSync(this.#fp, {
+                encoding: "utf8",
+            })
+
+            if (file == "")
+                return {
+                    exists: false,
+                    val: null,
+                }
+
+            var json = JSON.parse(file)
+            //console.log(typeof json)
+
+            if (jsonPath.filter((x) => x !== "").length > 0 && typeof json === "object" && json) {
+                for (let i = 0; i < jsonPath.length; i++) {
+                    if (typeof json[jsonPath[i]] !== "undefined") json = json[jsonPath[i]]
+                    else {
+                        json = null
+                        break
+                    }
+                }
+            } else if (jsonPath.filter((x) => x !== "").length > 0 && (typeof json !== "object" || !json)) json = null
+
+            return {
+                exists: json !== null,
+                val: json,
+            }
+        } catch (err) {
+            if (this.#flags.flags.alwaysThrowErrorsNoMatterWhat) throw console.error(err)
+            else console.error(err)
         }
     }
     /**
@@ -258,72 +290,77 @@ class Database {
      * @returns
      */
     set(jsonPath, newData) {
-        var spaces = this.#flags.flags.jsonSpaces
-        function zmienWartoscWJson(jsonStr, argument1, argument2) {
-            try {
-                const data = typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr || {}
-                const keys = typeof argument1 === "string" ? argument1.split(this.#flags.flags.keySeparator) : argument1
-                let current = data
-                for (const key of keys.slice(0, -1)) {
-                    if (!current[key]) {
-                        current[key] = {}
+        try {
+            var spaces = this.#flags.flags.jsonSpaces
+            function zmienWartoscWJson(jsonStr, argument1, argument2) {
+                try {
+                    const data = typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr || {}
+                    const keys = typeof argument1 === "string" ? argument1.split(this.#flags.flags.keySeparator) : argument1
+                    let current = data
+                    for (const key of keys.slice(0, -1)) {
+                        if (!current[key]) {
+                            current[key] = {}
+                        }
+                        current = current[key]
                     }
-                    current = current[key]
+                    current[keys[keys.length - 1]] = argument2
+                    if (spaces !== null) return JSON.stringify(data, null, spaces)
+                    else return JSON.stringify(data)
+                } catch (error) {
+                    throw console.error(err)
                 }
-                current[keys[keys.length - 1]] = argument2
-                if (spaces !== null) return JSON.stringify(data, null, spaces)
-                else return JSON.stringify(data)
-            } catch (error) {
-                throw console.error(error)
             }
-        }
 
-        if (typeof jsonPath === "undefined") throw console.error(new TypeError('"jsonPath" argument is required.'))
-        if (typeof jsonPath !== "string") throw console.error(new TypeError('"jsonPath" argument must be a string.'))
-        if (typeof newData === "undefined") {
-            console.warn(
-                this.#flags.flags.getAdvancedWarns
-                    ? new TypeError('(as a warn) "newData" argument isn\'t specified, it was changed to null.')
-                    : '<warning> "newData" argument isn\'t specified, it was changed to null.'
-            )
-            newData = null
-        } else if (newData === null) {
-            console.warn(
-                this.#flags.flags.getAdvancedWarns
-                    ? new TypeError('(as a warn) "newData" argument value is null, deleting...')
-                    : '<warning> "newData" argument value is null, deleting...'
-            )
-        }
-
-        if (newData === null && !this.#flags.flags.continueSettingThePathIfValueIsNull) {
-            this.delete(jsonPath)
-            return
-        }
-
-        jsonPath = jsonPath.split(this.#flags.flags.keySeparator)
-
-        if (!fs.existsSync(this.#fp)) {
-            if (jsonPath.filter((x) => x !== "").length > 0) var ndata = zmienWartoscWJson({}, jsonPath, newData)
-            else {
-                if (spaces !== null) var ndata = JSON.stringify(newData, null, spaces)
-                else var ndata = JSON.stringify(newData)
+            if (typeof jsonPath === "undefined") throw console.error(new TypeError('"jsonPath" argument is required.'))
+            if (typeof jsonPath !== "string") throw console.error(new TypeError('"jsonPath" argument must be a string.'))
+            if (typeof newData === "undefined") {
+                console.warn(
+                    this.#flags.flags.getAdvancedWarns
+                        ? new TypeError('(as a warn) "newData" argument isn\'t specified, it was changed to null.')
+                        : '<warning> "newData" argument isn\'t specified, it was changed to null.'
+                )
+                newData = null
+            } else if (newData === null) {
+                console.warn(
+                    this.#flags.flags.getAdvancedWarns
+                        ? new TypeError('(as a warn) "newData" argument value is null, deleting...')
+                        : '<warning> "newData" argument value is null, deleting...'
+                )
             }
-        } else {
-            if (jsonPath.filter((x) => x !== "").length > 0) var ndata = zmienWartoscWJson(typeof this.get().val === "object" ? this.get().val : {}, jsonPath, newData)
-            else {
-                if (spaces !== null) var ndata = JSON.stringify(newData, null, spaces)
-                else var ndata = JSON.stringify(newData)
-            }
-        }
 
-        fs.writeFileSync(this.#fp, ndata, {
-            encoding: "utf8",
-        })
+            if (newData === null && !this.#flags.flags.continueSettingThePathIfValueIsNull) {
+                this.delete(jsonPath)
+                return
+            }
+
+            jsonPath = jsonPath.split(this.#flags.flags.keySeparator)
+
+            if (this.#exists ?? !fs.existsSync(this.#fp)) {
+                if (jsonPath.filter((x) => x !== "").length > 0) var ndata = zmienWartoscWJson({}, jsonPath, newData)
+                else {
+                    if (spaces !== null) var ndata = JSON.stringify(newData, null, spaces)
+                    else var ndata = JSON.stringify(newData)
+                }
+            } else {
+                if (jsonPath.filter((x) => x !== "").length > 0) var ndata = zmienWartoscWJson(typeof this.get().val === "object" ? this.get().val : {}, jsonPath, newData)
+                else {
+                    if (spaces !== null) var ndata = JSON.stringify(newData, null, spaces)
+                    else var ndata = JSON.stringify(newData)
+                }
+            }
+
+            fs.writeFileSync(this.#fp, ndata, {
+                encoding: "utf8",
+            })
+        } catch (err) {
+            if (this.#flags.flags.alwaysThrowErrorsNoMatterWhat) throw console.error(err)
+            else console.error(err)
+        }
     }
     /**
      * Deletes value from path
      * @param {string} jsonPath Existing path
-     * @returns {{deleted: true, newJSON: *} | {deleted: false, code: number, reason: string}} Deletion information. All empty values from the any key specified in the `jsonPath` argument will be deleted if *`keepEmptyKeysWhileDeleting`* flag is disabled.
+     * @returns {LocalliumDeletionState} Deletion information. All empty values from the any key specified in the `jsonPath` argument will be deleted if *`keepEmptyKeysWhileDeleting`* flag is disabled.
      * @example
      * const { Databasae } = require("locallium")
      * const db = new Database()
@@ -336,76 +373,116 @@ class Database {
      * console.log(anotherdb.delete("somePath")) // => { deleted: false, code: 1404, reason: 'File ../noExistingFolder/andFile.json does not exist.' }
      */
     delete(jsonPath) {
-        var spaces = this.#flags.flags.jsonSpaces
-        let jsonData = fs.readFileSync(this.#fp, {
-            encoding: "utf8",
-        })
+        try {
+            var spaces = this.#flags.flags.jsonSpaces
+            let jsonData = fs.readFileSync(this.#fp, {
+                encoding: "utf8",
+            })
 
-        if (!fs.existsSync(this.#fp)) {
+            if (this.#exists ?? !fs.existsSync(this.#fp)) {
+                return {
+                    deleted: false,
+                    code: 1404,
+                    reason: `File ${this.#fp} does not exist.`,
+                }
+            }
+            if (!this.get(jsonPath).exists) {
+                return {
+                    deleted: false,
+                    code: 2404,
+                    reason: `Data in location "${jsonPath}" does not exist.`,
+                }
+            }
+
+            const keys = jsonPath.split(this.#flags.flags.keySeparator)
+            const data = JSON.parse(jsonData)
+
+            var n = 0
+            var ended = false
+
+            do {
+                // console.log(n)
+                let current = data
+                for (let i = 0; i < keys.length - 1 - n; i++) {
+                    const key = keys[i]
+                    // console.log(i, keys[i])
+                    current = current[key]
+                }
+
+                // console.log(keys[keys.length - 1 - n])
+
+                // console.log(
+                //     n < keys.length,
+                //     "|",
+                //     n == 0,
+                //     typeof current[keys[keys.length - 1 - n]],
+                //     typeof current[keys[keys.length - 1 - n]] === "object" ? Object.keys(current[keys[keys.length - 1 - n]] ?? {}).length == 0 : !current[keys[keys.length - 1 - n]]
+                // )
+
+                if (
+                    ((typeof current[keys[keys.length - 1 - n]] === "object"
+                        ? Object.keys(current[keys[keys.length - 1 - n]] ?? {}).length == 0
+                        : !current[keys[keys.length - 1 - n]]) ||
+                        n == 0) &&
+                    n < keys.length
+                ) {
+                    delete current[keys[keys.length - 1 - n]]
+                    n++
+                } else {
+                    ended = true
+                }
+            } while (!this.#flags.flags.keepEmptyKeysWhileDeleting && !ended)
+
+            if (spaces !== null) var x = JSON.stringify(data, null, spaces)
+            else var x = JSON.stringify(data)
+
+            fs.writeFileSync(this.#fp, x, {
+                encoding: "utf8",
+            })
+
             return {
-                deleted: false,
-                code: 1404,
-                reason: `File ${this.#fp} does not exist.`,
+                deleted: true,
+                newJSON: !data ? null : data,
             }
+        } catch (err) {
+            if (this.#flags.flags.alwaysThrowErrorsNoMatterWhat) throw console.error(err)
+            else console.error(err)
         }
-        if (!this.get(jsonPath).exists) {
-            return {
-                deleted: false,
-                code: 2404,
-                reason: `Data in location "${jsonPath}" does not exist.`,
-            }
-        }
+    }
 
-        const keys = jsonPath.split(this.#flags.flags.keySeparator)
-        const data = JSON.parse(jsonData)
-
-        var n = 0
-        var ended = false
-
-        do {
-            // console.log(n)
-            let current = data
-            for (let i = 0; i < keys.length - 1 - n; i++) {
-                const key = keys[i]
-                // console.log(i, keys[i])
-                current = current[key]
-            }
-
-            // console.log(keys[keys.length - 1 - n])
-
-            // console.log(
-            //     n < keys.length,
-            //     "|",
-            //     n == 0,
-            //     typeof current[keys[keys.length - 1 - n]],
-            //     typeof current[keys[keys.length - 1 - n]] === "object" ? Object.keys(current[keys[keys.length - 1 - n]] ?? {}).length == 0 : !current[keys[keys.length - 1 - n]]
-            // )
-
-            if (
-                ((typeof current[keys[keys.length - 1 - n]] === "object"
-                    ? Object.keys(current[keys[keys.length - 1 - n]] ?? {}).length == 0
-                    : !current[keys[keys.length - 1 - n]]) ||
-                    n == 0) &&
-                n < keys.length
-            ) {
-                delete current[keys[keys.length - 1 - n]]
-                n++
-            } else {
-                ended = true
-            }
-        } while (!this.#flags.flags.keepEmptyKeysWhileDeleting && !ended)
-
-        if (spaces !== null) var x = JSON.stringify(data, null, spaces)
-        else var x = JSON.stringify(data)
-
-        fs.writeFileSync(this.#fp, x, {
-            encoding: "utf8",
+    /**
+     * The same as `Database#get()`, but asynchromous
+     * @param {string} jsonPath
+     * @returns {Promise<LocalliumSnapshot>}
+     */
+    async aget(jsonPath = "") {
+        return new Promise((resolve, reject) => {
+            resolve(this.get(jsonPath))
         })
+    }
 
-        return {
-            deleted: true,
-            newJSON: !data ? null : data,
-        }
+    /**
+     * The same as `Database#set()`, but asynchromous
+     * @param {string} jsonPath
+     * @param {any} newData
+     * @returns {Promise<void>}
+     */
+    async aset(jsonPath, newData) {
+        return new Promise((resolve, reject) => {
+            resolve(this.set(jsonPath, newData))
+        })
+    }
+    /**
+     * The same as `Database#delete()`, but asynchromous
+     * @param {string} jsonPath
+     * @returns {Promise<LocalliumDeletionState>}
+     */
+    async adelete(jsonPath) {
+        return new Promise((resolve, reject) => {
+            const info = this.delete(jsonPath)
+            if (info.deleted) resolve(info)
+            else reject(info)
+        })
     }
 }
 
