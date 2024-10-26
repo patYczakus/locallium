@@ -4,7 +4,7 @@ const typeofKeys = ["string", "boolean", "number", "bigint", "function", "undefi
 /**
  * `Database#get()` snapshot
  * @typedef {Object} LocalliumSnapshot
- * @property {boolean} exist
+ * @property {boolean} exists
  * @property {any} val
  */
 
