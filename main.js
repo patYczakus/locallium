@@ -93,7 +93,9 @@ class LocalliumObjectManipulation {
             const data = (typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr) || {}
             let current = data
 
+            // console.log(data)
             for (const key of keys.slice(0, -1)) {
+                // console.log(current, key, current[key])
                 if (!current[key]) {
                     current[key] = {}
                 }
@@ -104,22 +106,20 @@ class LocalliumObjectManipulation {
             return spaces !== null ? JSON.stringify(data, null, spaces) : JSON.stringify(data)
         }
 
-        console.log()
-
-        if (typeof json == "string" && json.length > 0) json = JSON.parse(json?.toString?.() ?? "")
-        else json = {}
+        if (typeof json == "string" && json.length > 0) json = JSON.parse(json)
+        else if ((typeof json == "string" && json.length == 0) || typeof json != "object") json = {}
 
         let ndata
 
-        if (!json) {
-            if (jsonPath.filter((x) => x !== "").length > 0) {
-                ndata = changeJSONValue({}, jsonPath)
+        if (typeof json == "object") {
+            if (jsonPath.filter((x) => x).length > 0) {
+                ndata = changeJSONValue(json, jsonPath)
             } else {
                 ndata = spaces !== null ? JSON.stringify(newData, null, spaces) : JSON.stringify(newData)
             }
         } else {
-            if (jsonPath.filter((x) => x !== "").length > 0) {
-                ndata = changeJSONValue(typeof json == "object" ? json : {}, jsonPath)
+            if (jsonPath.filter((x) => x).length > 0) {
+                ndata = changeJSONValue({}, jsonPath)
             } else {
                 ndata = spaces !== null ? JSON.stringify(newData, null, spaces) : JSON.stringify(newData)
             }
@@ -523,7 +523,7 @@ class Database {
                 encoding: "utf8",
             })
 
-            console.log(newData)
+            // console.log(newData)
 
             return {
                 deleted: true,
