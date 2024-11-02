@@ -1,6 +1,6 @@
 # Locallium
 
-_Locallium_ is a package that makes the local database from your JSON file. Concept is derivatived from [Firebase](https://firebase.google.com/), and created making private Discord bot to polish server [_Kraczy gaj_](https://discord.gg/Y5pNk7Qn4X).
+_Locallium_ is a package that makes the local database from your JSON file. Concept is derivatived from [Firebase](https://firebase.google.com/), and created making private Discord bot to polish server [_Kruczy Gaj_](https://discord.gg/Y5pNk7Qn4X).
 
 ## Instalation
 
@@ -78,12 +78,14 @@ flags2.setFlag("createDatabaseFileOnReadIfDoesntExist", true) // It will set it,
 const dbs = [new Database("database", flags1), new Database("database2", flags2)]
 ```
 
-There is a list of flags, you can also use static getter `DatabaseFlags.flagsList` and method `DatabaseFlags.getFlagInfo()`:
+There is a list of flags, you can also use static getter `DatabaseFlags#flagsList` and method `DatabaseFlags#getFlagInfo()`:
 
 -   Flag `getAdvancedWarns`
+    -   > Uses `Error`-likes classes to show warns
     -   Possible values: boolean
     -   Default value: `false`
 -   Flag `createDatabaseFileOnReadIfDoesntExist`
+    -   > Creates file when used any method from `Database` class
     -   Possible values: boolean
     -   Default value: `false`
 -   Flag `setValueToDatabaseFileOnReadIfDoesntExist`
@@ -91,24 +93,59 @@ There is a list of flags, you can also use static getter `DatabaseFlags.flagsLis
     -   Possible values: string (stringified JSON)
     -   Default value: empty string
 -   Flag `continueSettingThePathIfValueIsNull`
+    -   > Changes the behavior hen new data is `null` - when this flag is `false`, `Database#delete()` (or `Database#adelete()` if asynchromous) is used.
     -   Possible values: boolean
     -   Default value: `false`
 -   Flag `keepEmptyKeysWhileDeleting`
+    -   > Means that JSON target path is deleted, not touching the empty parents
     -   Possible values: boolean
     -   Default value: `false`
 -   Flag `keySeparator`
+    -   > Only changable on JSON path (file path)
     -   Possible values: string
     -   Default value: `"."`
 -   Flag `jsonSpaces`
-    -   > Cause also formatting file
+    -   > Causes formatting file when provided
     -   Possible values: number or `null`
     -   Default value: `4`
 -   Flag `alwaysThrowErrorsNoMatterWhat`
+    -   > Means that all of errors (catched or locallium-maked) will be throwed
     -   Possible values: boolean
     -   Default value: `false`
 -   Flag `checkFileExistFrom`
+    -   > Declarates which function use to check existence of file. `"methods"` means that checking will be in all methods from `Database` class. `"watchFunc"` uses `fs#watch()` listener.
     -   Possible values: `"watchFunc"` or `"methods"`
     -   Default value: `"methods"`
+
+## `LocalliumObjectManipulation`
+
+> Requires _Locallium_ v1.2.0 or later
+
+_Locallium_ also provides class to easily and fast import, export or remove the data from object variables. As mentioned before, `LocalliumObjectManipulation` has a built-in JSDoc.
+
+```js
+const { LocalliumObjectManipulation } = require("./main.js")
+
+const jsonData = JSON.stringify({
+    name: "John Doe",
+    age: 30,
+    address: {
+        street: "123 Main St",
+        city: "Anytown",
+        zip: "12345",
+    },
+})
+
+const nameSnapshot = LocalliumObjectManipulation.get(jsonData, ["name"])
+console.log(nameSnapshot.exists) // => true
+console.log(nameSnapshot.val) // => "John Doe"
+
+const newJsonData = LocalliumObjectManipulation.set(jsonData, ["address", "zip"], "54321", null)
+console.log(newJsonData) // => {"name": "John Doe", "age": 30, "address": {"street": "123 Main St", "city": "Anytown", "zip": "54321"}}
+
+const updatedJsonData = LocalliumObjectManipulation.delete(newJsonData, ["address", "city"])
+console.log(updatedJsonData) // => {"name": "John Doe", "age": 30, "address": {"street": "123 Main St", "zip": "54321"}}
+```
 
 ## License
 

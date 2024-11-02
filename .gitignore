@@ -128,3 +128,8 @@ dist
 
 # GitHub files
 .github/
+
+# Other files
+*.test.js
+*.dev.js
+*.test.json
