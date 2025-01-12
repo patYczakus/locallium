@@ -81,23 +81,23 @@ const dbs = [new Database("database", flags1), new Database("database2", flags2)
 There is a list of flags, you can also use static getter `DatabaseFlags#flagsList` and method `DatabaseFlags#getFlagInfo()`:
 
 -   Flag `getAdvancedWarns`
-    -   > Uses `Error`-likes classes to show warns
+    -   > Uses the `Warn` class, extended from `Error`, to print a warn.
     -   Possible values: boolean
     -   Default value: `false`
 -   Flag `createDatabaseFileOnReadIfDoesntExist`
-    -   > Creates file when used any method from `Database` class
+    -   > When used `Database#get()` or `Database#delete()` (or `Database#aget()`/`Database#adelete()` if asynchromous), creates a file if it doesn't exist.
     -   Possible values: boolean
     -   Default value: `false`
 -   Flag `setValueToDatabaseFileOnReadIfDoesntExist`
-    -   > Only if _`createDatabaseFileOnReadIfDoesntExist`_ is set to `true`
+    -   > When used `Database#get()` (or `Database#aget()` if asynchromous), _`createDatabaseFileOnReadIfDoesntExist`_ is activated and the file was freshly created, writes the declared stringified JSON object.
     -   Possible values: string (stringified JSON)
     -   Default value: empty string
 -   Flag `continueSettingThePathIfValueIsNull`
-    -   > Changes the behavior hen new data is `null` - when this flag is `false`, `Database#delete()` (or `Database#adelete()` if asynchromous) is used.
+    -   > In default, `null` is treated like it is no value, and as a result, the path is being deleted on `Database#set()` using `Database#delete()` (also on `Database#aset()` using `Database#adelete()` if asynchromous). Enabling this flag prevents this situation.
     -   Possible values: boolean
     -   Default value: `false`
 -   Flag `keepEmptyKeysWhileDeleting`
-    -   > Means that JSON target path is deleted, not touching the empty parents
+    -   > Changes the behavior in deleting the main location keeping the parent key empty. Notice that it might also change the behavior when using `Database#get()` (or `Database#aget()` if asynchromous)
     -   Possible values: boolean
     -   Default value: `false`
 -   Flag `keySeparator`
@@ -105,7 +105,7 @@ There is a list of flags, you can also use static getter `DatabaseFlags#flagsLis
     -   Possible values: string
     -   Default value: `"."`
 -   Flag `jsonSpaces`
-    -   > Causes formatting file when provided
+    -   > Tells how many spaces is used (as a tab) on beautifing the JSON file. Setting `0` or `null` turns off the prettier.
     -   Possible values: number or `null`
     -   Default value: `4`
 -   Flag `alwaysThrowErrorsNoMatterWhat`
@@ -116,6 +116,8 @@ There is a list of flags, you can also use static getter `DatabaseFlags#flagsLis
     -   > Declarates which function use to check existence of file. `"methods"` means that checking will be in all methods from `Database` class. `"watchFunc"` uses `fs#watch()` listener.
     -   Possible values: `"watchFunc"` or `"methods"`
     -   Default value: `"methods"`
+-   Flags `customMetadataReviewer` and `customMetadataReplacer`
+    -   > Act as a special and standalone function to `Database#get()` (or `Database#aget()` if asynchromous).
 
 ## `LocalliumObjectManipulation`
 
@@ -126,7 +128,7 @@ _Locallium_ also provides class to easily and fast import, export or remove the 
 ```js
 const { LocalliumObjectManipulation } = require("./main.js")
 
-const jsonData = JSON.stringify({
+const info = {
     name: "John Doe",
     age: 30,
     address: {
@@ -134,18 +136,30 @@ const jsonData = JSON.stringify({
         city: "Anytown",
         zip: "12345",
     },
-})
+}
 
-const nameSnapshot = LocalliumObjectManipulation.get(jsonData, ["name"])
+const nameSnapshot = LocalliumObjectManipulation.get(info, ["name"])
 console.log(nameSnapshot.exists) // => true
 console.log(nameSnapshot.val) // => "John Doe"
 
-const newJsonData = LocalliumObjectManipulation.set(jsonData, ["address", "zip"], "54321", null)
-console.log(newJsonData) // => {"name": "John Doe", "age": 30, "address": {"street": "123 Main St", "city": "Anytown", "zip": "54321"}}
+const newJsonData = LocalliumObjectManipulation.set(info, ["address", "zip"], "54321", null)
+console.log(newJsonData) // => { "name": "John Doe", "age": 30, "address": { "street": "123 Main St", "city": "Anytown", "zip": "54321" } }
 
-const updatedJsonData = LocalliumObjectManipulation.delete(newJsonData, ["address", "city"])
-console.log(updatedJsonData) // => {"name": "John Doe", "age": 30, "address": {"street": "123 Main St", "zip": "54321"}}
+const updatedJsonData = LocalliumObjectManipulation.delete(info, ["address", "city"])
+console.log(updatedJsonData) // => { "name": "John Doe", "age": 30, "address": { "street": "123 Main St", "zip": "54321" } }
 ```
+
+> You can also use the older versions. There is a list:
+>
+> -   `v1.2.0`
+>
+> To use this, simply use `LocalliumObjectManipulation#<version>`.
+>
+> ```js
+> LocalliumObjectManipulation["v1.2.0"].get("", [])
+> ```
+>
+> It is not, however, recommended to use. They are flagged as `@deprecated`
 
 ## License
 
