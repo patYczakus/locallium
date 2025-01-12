@@ -117,7 +117,9 @@ There is a list of flags, you can also use static getter `DatabaseFlags#flagsLis
     -   Possible values: `"watchFunc"` or `"methods"`
     -   Default value: `"methods"`
 -   Flags `customMetadataReviewer` and `customMetadataReplacer`
-    -   > Act as a special and standalone function to `Database#get()` (or `Database#aget()` if asynchromous).
+    -   > Act as a special functions on parsing/stringifying JSON in all of methods (even asynchromous).
+    -   Possible values: function or `null`
+    -   Default value: `null`
 
 ## `LocalliumObjectManipulation`
 

@@ -114,7 +114,7 @@ class LocalliumObjectManipulation {
      * console.log(snapshot5) // => { exists: true, val: { a: { b: { c: 3 } } } }
      */
     static get(json, jsonPath) {
-        if (typeof json == "object" ? Object.keys(json).length == 0 : !Boolean(json)) {
+        if (typeof json == "object" && json !== null ? Object.keys(json).length == 0 : !Boolean(json)) {
             return {
                 exists: false,
                 val: null,
@@ -167,9 +167,7 @@ class LocalliumObjectManipulation {
             const data = json
             let current = data
 
-            // console.log(data)
             for (const key of keys.slice(0, -1)) {
-                // console.log(current, key, current[key])
                 if (!current[key]) {
                     current[key] = {}
                 }
@@ -180,7 +178,7 @@ class LocalliumObjectManipulation {
             return data
         }
 
-        if (typeof json != "object") json = {}
+        if (typeof json != "object" || json == null) json = {}
 
         let ndata
 
@@ -774,7 +772,9 @@ class Database {
                 encoding: "utf8",
             })
 
-            return LocalliumObjectManipulation.get(JSON.parse(file, this.activeFlags.customMetadataReviewer), jsonPath)
+            const json = this.activeFlags.customMetadataReviewer ? JSON.parse(file, this.activeFlags.customMetadataReviewer) : JSON.parse(file)
+            // console.log(file, json)
+            return LocalliumObjectManipulation.get(json, jsonPath)
         } catch (err) {
             if (this.activeFlags.alwaysThrowErrorsNoMatterWhat) throw err
             else console.error(err)
@@ -807,7 +807,7 @@ class Database {
 
             const ndata = LocalliumObjectManipulation.set((await this.aget()).val, jsonPath.split(this.activeFlags.keySeparator), newData)
 
-            await fsp.writeFile(this.#fp, ndata, {
+            await fsp.writeFile(this.#fp, JSON.stringify(ndata, this.activeFlags.customMetadataReplacer, this.activeFlags.jsonSpaces ?? 0), {
                 encoding: "utf8",
             })
         } catch (err) {
