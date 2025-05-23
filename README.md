@@ -12,114 +12,55 @@ npm install locallium
 
 ## Database usage
 
-All classes and functions have JSDoc documentation, so you can learn more about them while coding and see some examples. In the bottom you can also see some program example.
+All classes and functions have JSDoc documentation, so you can learn more about them while coding and see some examples.
 
-> For flags configuration see: [Types of flags and usage](#types-of-flags-and-usage)
+> [!TIP]
+> You can enable some flags. Check [_Types of flags and usage_](#types-of-flags-and-usage) for more
 
-```js
-const { Database, DatabaseFlags } = require("locallium")
+### Basics
 
-const info = {
-    filepath: "./databases/1", //converts as "./databases/1.json"
-    flags: new DatabaseFlags(),
-}
-const db = new Database(info.filepath, info.flags)
-let data = db.get()
+All databases goes with get/set/delete pack.
 
-if (data.exists) {
-    data = data.val
-    data.uses.last.i++
-    data.uses.last.timestamp = Date.now()
+-   **Get** returns a snapshot - existance boolean and value.
+-   **Set** is just a void.
+-   **Delete** return deletion state - if deleted, returns new JSON. If not, it gives an error code and a description.
 
-    if ("dice" in data) console.log(`Dice number: ${data.dice}`)
+### Differences
 
-    const deleteStatus = db.remove("data.dice")
-    if (deleteStatus.deleted) {
-        data = deleteStatus.newJSON
-    } else {
-        console.error("Couldn't delete data from database.", deleteStatus.reason)
-    }
-} else
-    data = {
-        uses: {
-            firstTimestamp: Date.now(),
-            last: {
-                timestamp: Date.now(),
-                i: 1,
-            },
-        },
-        dice: Math.floor(Math.random() * 6) + 1,
-    }
-
-db.set("", data)
-```
-
-You can also use asynchromous functions, prefixed with letter "a": `Database#aget()`, `Database#aset()` and `Database#adelete()`
+-   `FileDatabase` (old deprecated name: `Database`)
+    -   It have a synchromous functions, and asynchromous ones ( prefixed with `a-`).
+    -   Small system.
+    -   Subtaible to small files.
+    -   Saves alike 6200-6400 keys in 30 seconds.
+-   `FileDatabaseV2`
+    -   Only asynchromous functions.
+    -   RAM Consumer (but it can be handled normally)
+    -   Subtaible to huge files.
+    -   Saves alike 171800-172000 keys in 30 seconds.
 
 ## Types of flags and usage
 
-`DatabaseFlags` classes have some flags that can be used to enable features. To use, check the code below:
+All databases classes have some flags that can be used to enable features. To use, check the code below:
 
 ```js
-const { Database, DatabaseFlags } = require("locallium")
+const { FileDatabase, FileDatabaseV2 } = require("locallium")
 
-// First method
-const flags1 = new DatabaseFlags({
+const data1 = new FileDatabase("database", {
     getAdvancedWarns: true,
     continueSettingThePathIfDoesntExist: true,
     continueSettingThePathIfValueIsNull: true,
 })
-
-// Second method
-const flags2 = new DatabaseFlags().setFlag("getAdvancedWarns", true).setFlag("continueSettingThePathIfDoesntExist", true).setFlag("continueSettingThePathIfValueIsNull", true)
-
-flags2.setFlag("createDatabaseFileOnReadIfDoesntExist", true) // It will set it, too
-
-const dbs = [new Database("database", flags1), new Database("database2", flags2)]
+const data2 = new FileDatabaseV2("database", {
+    createDatabaseFileOnReadIfDoesntExist: true
+    getAdvancedWarns: true,
+    pendingLimit: 20000
+})
 ```
 
-There is a list of flags, you can also use static getter `DatabaseFlags#flagsList` and method `DatabaseFlags#getFlagInfo()`:
+List of flags will be shown by the IntelliDev, due to variaty of system types
 
--   Flag `getAdvancedWarns`
-    -   > Uses the `Warn` class, extended from `Error`, to print a warn.
-    -   Possible values: boolean
-    -   Default value: `false`
--   Flag `createDatabaseFileOnReadIfDoesntExist`
-    -   > When used `Database#get()` or `Database#delete()` (or `Database#aget()`/`Database#adelete()` if asynchromous), creates a file if it doesn't exist.
-    -   Possible values: boolean
-    -   Default value: `false`
--   Flag `setValueToDatabaseFileOnReadIfDoesntExist`
-    -   > When used `Database#get()` (or `Database#aget()` if asynchromous), _`createDatabaseFileOnReadIfDoesntExist`_ is activated and the file was freshly created, writes the declared stringified JSON object.
-    -   Possible values: string (stringified JSON)
-    -   Default value: empty string
--   Flag `continueSettingThePathIfValueIsNull`
-    -   > In default, `null` is treated like it is no value, and as a result, the path is being deleted on `Database#set()` using `Database#delete()` (also on `Database#aset()` using `Database#adelete()` if asynchromous). Enabling this flag prevents this situation.
-    -   Possible values: boolean
-    -   Default value: `false`
--   Flag `keepEmptyKeysWhileDeleting`
-    -   > Changes the behavior in deleting the main location keeping the parent key empty. Notice that it might also change the behavior when using `Database#get()` (or `Database#aget()` if asynchromous)
-    -   Possible values: boolean
-    -   Default value: `false`
--   Flag `keySeparator`
-    -   > Only changable on JSON path (file path)
-    -   Possible values: string
-    -   Default value: `"."`
--   Flag `jsonSpaces`
-    -   > Tells how many spaces is used (as a tab) on beautifing the JSON file. Setting `0` or `null` turns off the prettier.
-    -   Possible values: number or `null`
-    -   Default value: `4`
--   Flag `alwaysThrowErrorsNoMatterWhat`
-    -   > Means that all of errors (catched or locallium-maked) will be throwed
-    -   Possible values: boolean
-    -   Default value: `false`
--   Flag `checkFileExistFrom`
-    -   > Declarates which function use to check existence of file. `"methods"` means that checking will be in all methods from `Database` class. `"watchFunc"` uses `fs#watch()` listener.
-    -   Possible values: `"watchFunc"` or `"methods"`
-    -   Default value: `"methods"`
--   Flags `customMetadataReviewer` and `customMetadataReplacer`
-    -   > Act as a special functions on parsing/stringifying JSON in all of methods (even asynchromous).
-    -   Possible values: function or `null`
-    -   Default value: `null`
+> [!IMPORTANT]
+> Using `DatabaseFlags` is deprecated since v1.4.0 due to TypeScript support. Although it is still supported, it is not recommended to use, and it isn't declarated in types. Plans about deleting it are on v1.6.0.
 
 ## `LocalliumObjectManipulation`
 
@@ -151,6 +92,7 @@ const updatedJsonData = LocalliumObjectManipulation.delete(info, ["address", "ci
 console.log(updatedJsonData) // => { "name": "John Doe", "age": 30, "address": { "street": "123 Main St", "zip": "54321" } }
 ```
 
+> [!NOTE]
 > You can also use the older versions. There is a list:
 >
 > -   `v1.2.0`
