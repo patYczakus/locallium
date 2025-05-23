@@ -174,6 +174,7 @@ class Database {
         this.#exists = this.activeFlags.checkFileExistFrom !== "methods" ? fs.existsSync(this.#fp) : null
 
         if (this.activeFlags.checkFileExistFrom !== "methods") {
+            LFM.createifnotexists(this.#fp, this.activeFlags.setValueToDatabaseFileOnReadIfDoesntExist)
             fs.watch(this.#fp, null, (type) => {
                 if (type == "rename") this.#exists = LFM.exists(this.#fp)
             })

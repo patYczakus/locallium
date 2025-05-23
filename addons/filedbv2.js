@@ -80,6 +80,7 @@ class Database {
         this.#exists = this.activeFlags.checkFileExistFrom !== "methods" ? LFM.exists(this.#fp) : null
 
         if (this.activeFlags.checkFileExistFrom !== "methods") {
+            LFM.createifnotexists(this.#fp, this.activeFlags.setValueToDatabaseFileOnReadIfDoesntExist)
             let lastEvent = 0
             require("fs").watch(this.#fp, null, (type) => {
                 const now = Date.now()
@@ -92,9 +93,9 @@ class Database {
     }
 
     async #fileExistSystem() {
-        if (!(this.#exists ?? (await fsp.existsSync(this.#fp)))) {
+        if (!(this.#exists ?? fs.existsSync(this.#fp))) {
             if (this.activeFlags.createDatabaseFileOnReadIfDoesntExist) {
-                await LFM.createifnotexists(this.#fp, this.activeFlags.setValueToDatabaseFileOnReadIfDoesntExist)
+                LFM.createifnotexists(this.#fp, this.activeFlags.setValueToDatabaseFileOnReadIfDoesntExist)
             }
             return false
         }
