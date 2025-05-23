@@ -246,7 +246,7 @@ class Database {
                 }
             }
 
-            return await this.#get(jsonPath)
+            return await this.#get(jsonPath.join(this.activeFlags.keySeparator))
         } catch (err) {
             if (this.activeFlags.alwaysThrowErrorsNoMatterWhat) throw err
             else console.error(err)
