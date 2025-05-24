@@ -161,6 +161,7 @@ class Database {
             }
 
             if (this.#currentData !== null) {
+                const cloneData = structuredClone(this.#currentData)
                 return LocalliumObjectManipulation.get(this.#currentData, jsonPath)
             }
 
@@ -170,7 +171,8 @@ class Database {
 
             if (fileSize < freeMem) {
                 this.#currentData = JSON.parse(await fsp.readFile(this.#fp, "utf8"))
-                return LocalliumObjectManipulation.get(this.#currentData, jsonPath)
+                const cloneData = structuredClone(this.#currentData)
+                return LocalliumObjectManipulation.get(cloneData, jsonPath)
             } else {
                 const chunkSize = this.#getChunkSize()
                 const stream = fs.createReadStream(this.#fp, { encoding: "utf8", highWaterMark: chunkSize })
@@ -189,7 +191,7 @@ class Database {
                         .on("close", resolve)
                 })
 
-                return { exists: !!result, val: result }
+                return { exists: !!result, val: structuredClone(result) }
             }
         } catch (err) {
             if (this.activeFlags.alwaysThrowErrorsNoMatterWhat) throw err

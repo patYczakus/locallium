@@ -111,7 +111,7 @@ class LocalliumObjectManipulation {
 
             return {
                 exists: json !== null,
-                val: json,
+                val: structuredClone(json),
             }
         },
 
@@ -152,7 +152,7 @@ class LocalliumObjectManipulation {
                 }
             }
 
-            return ndata
+            return structuredClone(ndata)
         },
 
         delete(json, keys, keepEmptyKeys = false) {
@@ -181,7 +181,7 @@ class LocalliumObjectManipulation {
                 }
             } while (!keepEmptyKeys && !ended)
 
-            return data
+            return structuredClone(data)
         },
     }
 }
