@@ -5,4 +5,6 @@ module.exports = {
     DatabaseFlags: require("./addons/filedb").DatabaseFlags,
     LocalliumObjectManipulation: require("./addons/lom"),
     LOM: require("./addons/lom"),
+    LocalliumFileManager: require("./addons/lfm"),
+    LFM: require("./addons/lfm"),
 }

@@ -17,6 +17,7 @@ const flagsinfo = [
     ["pendingLimit", "t:number", 10000],
     ["ramUsageFloat", "t:number", 0.5],
     ["getChangesStrategy", "s:smart//s:flush//s:tempCache//s:exclude", "smart"],
+    ["includeOutsideChanges", "t:boolean", false],
 ]
 
 function flagparser(flags) {
@@ -60,7 +61,7 @@ const fs = require("node:fs")
 const fsp = fs.promises
 const JSONStream = require("JSONStream")
 const LocalliumObjectManipulation = require("./lom")
-const LFM = require("../assets/betterfilemanager")
+const LFM = require("./lfm")
 const writeFileAtomic = require("write-file-atomic")
 const os = require("node:os")
 
@@ -71,6 +72,7 @@ class Database {
     #flushTimeout = null
     #currentData = null
     #isDirty = false
+    #chbt = false
 
     constructor(filePath = "database", flags = null) {
         flags = flagparser(flags)
@@ -81,15 +83,22 @@ class Database {
 
         if (this.activeFlags.checkFileExistFrom !== "methods") {
             LFM.createifnotexists(this.#fp, this.activeFlags.setValueToDatabaseFileOnReadIfDoesntExist)
-            let lastEvent = 0
-            require("fs").watch(this.#fp, null, (type) => {
-                const now = Date.now()
-                if (type === "rename" && now - lastEvent > 1000) {
-                    this.#exists = LFM.exists(this.#fp)
-                    lastEvent = now
-                }
-            })
         }
+        let lastEvent = 0
+        require("fs").watch(this.#fp, null, (type) => {
+            const now = Date.now()
+            if (type === "rename" && this.activeFlags.checkFileExistFrom !== "methods" && now - lastEvent > 1000) {
+                this.#exists = LFM.exists(this.#fp)
+                lastEvent = now
+            } else if (type === "change" && this.activeFlags.includeOutsideChanges && this.#chbt) {
+                this.#chbt = false
+                this.#currentData = null
+            }
+        })
+
+        process.on("exit", async () => {
+            await this.close()
+        })
     }
 
     async #fileExistSystem() {
@@ -139,6 +148,7 @@ class Database {
                 }
             }
 
+            this.#chbt = true
             await writeFileAtomic(this.#fp, JSON.stringify(updatedData, this.activeFlags.customMetadataReplacer, this.activeFlags.jsonSpaces ?? 0))
 
             this.#currentData = updatedData

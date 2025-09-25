@@ -160,7 +160,7 @@ function flagparser(flags) {
 const fs = require("node:fs")
 const fsp = fs.promises
 const LocalliumObjectManipulation = require("./lom")
-const LFM = require("../assets/betterfilemanager")
+const LFM = require("./lfm")
 
 class Database {
     #fp

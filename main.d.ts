@@ -2,12 +2,12 @@
 ```txt
 |  __        ______    ______    ______    __        __        __    __  __    __    __ 
 | /\ \      /\  __ \  /\  ___\  /\  __ \  /\ \      /\ \      /\ \  /\ \/\ \  /\ "-./  \
-| \ \ \____ \ \ \/\ \ \ \ \____ \ \  __ \ \ \ \____ \ \ \____ \ \ \ \ \ \_\ \ \ \ \-./\ \     .   . .   .-. 
-|  \ \_____\ \ \_____\ \ \_____\ \ \_\ \_\ \ \_____\ \ \_____\ \ \_\ \ \_____\ \ \_\ \ \_\   '|   `-|   |\| 
-|   \/_____/  \/_____/  \/_____/  \/_/\/_/  \/_____/  \/_____/  \/_/  \/_____/  \/_/  \/_/    ' .   ' . `-' 
-    ```
+| \ \ \____ \ \ \/\ \ \ \ \____ \ \  __ \ \ \ \____ \ \ \____ \ \ \ \ \ \_\ \ \ \ \-./\ \          _     _  
+|  \ \_____\ \ \_____\ \ \_____\ \ \_\ \_\ \ \_____\ \ \_____\ \ \_\ \ \_____\ \ \_\ \ \_\    /|  |_    / \ 
+|   \/_____/  \/_____/  \/_____/  \/_/\/_/  \/_____/  \/_____/  \/_/  \/_____/  \/_/  \/_/     | o _) o \_/ 
+```
 # | Your powerful local database system based on JSON.
-## | Made by [patYczakus](https://github.com/patYczakus). Licensed under MIT License.
+## | Made by [patYczakus](https://github.com/patYczakus). Licensed under Apache-2.0 License.
 `Copyright (c) 2023 patYczakus`
 */
 export as namespace locallium
@@ -18,7 +18,7 @@ export as namespace locallium
  * @param val The value itself. If the value does not exist, it will be `null`.
  */
 declare type LocalliumSnapshot = {
-    exist: boolean
+    exists: boolean
     val: any
 }
 
@@ -108,13 +108,20 @@ declare type FileDatabaseV2Flags = {
     ramUsageFloat: number
     /**
      * Declares how the pending changes will be threaten on `FileDatabaseV2#get()`.
-     * - `"smart"` uses two methods `"flush"` and `"tempCache"` depending on RAM and elements. Flushing, *if neccesary**, is made in background.
-     * - `"flush"` always flushes the pending changes.
-     * - `"tempCache"` makes temponary changes
+     * - `"smart"` uses two methods `"flush"` and `"tempCache"` depending on RAM and elements. Flushing, **if neccesary**, is made in background.
+     * - `"flush"` always flushes the pending changes in foreground.
+     * - `"tempCache"` makes temponary changes.
      * - `"exclude"` doesn't use pending changes, only when it flushes, it is saved.
      * @default "smart"
      */
     getChangesStrategy: "smart" | "flush" | "tempCache" | "exclude"
+    /**
+     * **IN BETA STATE. This might cause some bugs or/and errors!**
+     *
+     * Changes behaviour about `FileDatabaseV2#get()`. If enabled, the outside changes resets the cache.
+     * @default false
+     */
+    includeOutsideChanges: boolean
 }
 
 /**
@@ -325,7 +332,16 @@ export class FileDatabaseV2 {
     delete(jsonPath: string): Promise<LocalliumDeleteState<boolean>>
 }
 
+export class LocalliumFileManager {
+    static exists(filepath: string): boolean
+    static createifnotexists(filepath: string, value: string = "{}"): boolean
+}
+
 /**
  * Just an alias for `LocalliumObjectManipulation` class.
  */
 export const LOM: typeof LocalliumObjectManipulation
+/**
+ * Just an alias for `LocalliumFileManager` class.
+ */
+export const LFM: typeof LocalliumFileManager
